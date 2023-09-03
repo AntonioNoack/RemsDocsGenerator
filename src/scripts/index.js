@@ -1,21 +1,25 @@
 
-async function readFiles(url) {
-  const {entries} = await unzipit.unzip(url);
-  await Promise.all(Object.values(entries).map(async(entry) => {
-	let data = window.data = await entry.json()
-	tree.innerHTML = '' // clear static tree
-	createTree(tree, data, 0, null)
-	displayClass(data.me.anno.Engine, 'me/anno/Engine', 'Engine')
-  }));
+let maxNumResults = 250
+
+async function unzipDocs() {
+	const {entries} = await unzipit.unzip('docs.zip');
+	Object.values(entries).map(async(entry) => {
+	
+		let data = window.data = await entry.json()
+		tree.innerHTML = '' // clear static tree
+		createTree(tree, data, 0, null)
+		
+		let firstPage = new URLSearchParams(window.location.search).get('page') || 'me/anno/Engine'
+		openPath(firstPage.split('.').join('/'))
+	});
 }
-readFiles('docs.zip')
+unzipDocs()
 
 function endsWith(hay, needle){
 	return hay.length >= needle.length &&
 		hay.substr(hay.length-needle.length, needle.length) == needle
 }
 
-let maxNumResults = 250
 searchBar.onkeydown = (e) => {
 	if(e.keyCode == 13) {
 		let term = searchBar.value.trim().toLowerCase()
@@ -40,14 +44,7 @@ searchBar.onkeydown = (e) => {
 				result.forEach(r => {
 					let child = document.createElement('p')
 					let path = r[0]
-					child.onclick = () => {
-						let obj = data
-						let parts = path.split('/')
-						parts.forEach(x => {
-							obj = obj[x]
-						})
-						displayClass(obj, path, parts[parts.length-1])
-					}
+					child.onclick = () => { openPath(path) }
 					child.style.cursor = 'pointer'
 					child.innerHTML = '<span class="name">' + path + '</span>' + ': ' + r[1].map(ri => {
 						let i = 0
@@ -69,7 +66,7 @@ searchBar.onkeydown = (e) => {
 							}
 						}
 						return '<span class="comment">' + res + '</span>'
-					}).join(', ') // todo mark where it was found
+					}).join(', ')
 					searchResults.appendChild(child)
 				})
 				if(result.length >= maxNumResults) {
@@ -82,6 +79,15 @@ searchBar.onkeydown = (e) => {
 			} else searchResults.innerHTML = 'No results were found'
 		}
 	}
+}
+
+function openPath(path) {
+	let obj = data
+	let parts = path.split('/')
+	parts.forEach(part => {
+		obj = obj[part] || obj
+	})
+	displayClass(obj, path, parts[parts.length-1])
 }
 
 function search(data, term, path, result) {
@@ -210,6 +216,7 @@ function displayClass(dataK, subPath, key) {
 		(isConstructor ? ')' : '): <span class="type">' + formatType(method[3]||'?') + '</span>')
 		methods.appendChild(p)
 	})
+	window.history.replaceState(subPath, key, window.location.href.split('?')[0] + "?page=" + subPath)
 }
 
 function isKtFile(kw,dataK) {

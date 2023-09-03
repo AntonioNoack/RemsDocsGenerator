@@ -16,8 +16,7 @@ import java.util.zip.ZipOutputStream
 //  - index the most common terms / via compression (?) depends on size
 
 // todo links for all types (most type names are unique)
-// todo linkability
-// todo google-indexability
+// todo google-indexability: add links to the tree (?)
 // todo highlight currently shown page in tree
 // todo when clicking on a search result, also open the tree there
 // todo show ordinal for enums
