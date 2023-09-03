@@ -5,6 +5,10 @@ import me.anno.io.files.FileReference.Companion.getReference
 import me.anno.utils.OS.desktop
 import me.anno.utils.types.InputStreams.readNBytes2
 
+/**
+ * This was a test on whether I find the sources for the icons in IntelliJ IDEA.
+ * I was able to reverse-engineer the db-files, but failed to find the correct icons.
+ * */
 fun main() {
     desktop.getChild("icon").tryMkdirs()
     val folder = getReference("C:\\Program Files\\IntelliJ IDEA\\bin\\icons")
@@ -12,7 +16,7 @@ fun main() {
         var i = 0
         val stream = src.inputStreamSync()
         var pos = 0L
-        files@ while (true) {
+        while (true) {
             val dim = stream.read()
             if (dim <= 0) break
             if (dim == 254) {
@@ -22,7 +26,7 @@ fun main() {
                     println("Weird! $w x $h @${pos.toString(16)}")
                     h = stream.read()
                 }
-                println("$w x $h")
+                // println("$w x $h")
                 val size = w * h * 4
                 val bytes = stream.readNBytes2(size, true)
                 val image = ByteImage(w, h, ByteImage.Format.BGRA, bytes)
