@@ -1,0 +1,82 @@
+<html lang="en">
+<head>
+	<title>Rem's Engine's Documentation</title>
+	<meta charset="UTF-8"/>
+	<link rel="stylesheet" href="styles/index.css"/>
+	<link rel="stylesheet" href="styles/topnav.css"/>
+	<meta name="viewport" content="width=1024">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="mobile-mobile-web-app-capable" content="yes">
+	<link rel="apple-touch-icon" sizes="144x144" href="/img/apple-touch-icon.png">
+	<link rel="icon" type="image/png" href="/img/fav128.png" sizes="128x128">
+	<link rel="icon" type="image/png" href="/img/fav64.png" sizes="64x64">
+	<link rel="icon" type="image/png" href="/img/fav32.png" sizes="32x32">
+	<link rel="icon" type="image/png" href="/img/fav16.png" sizes="16x16">
+	<meta name="author" content="Antonio Noack"/>
+	<meta name="description" content="Web documentation for Rem's Engine. This is extracted information from the source code.">
+	<meta name="keywords" content="Rem's Engine, Documentation, Docs, Game Engine, Open Source, Kotlin">
+</head>
+<body>
+
+<div class="topnav">
+	<a class="active" href="https://remsengine.phychi.com/">Rem's Engine</a>
+	<a href="https://remsengine.phychi.com/?s=about">About</a>
+	<a href="https://discord.com/invite/qFs9ajJmcD">Discord</a>
+	<input id="searchBar" type="text" placeholder="Search 📚">
+</div>
+
+<div class="container">
+	<div class="sidebar">
+		<div class="sidebar1">
+			<ul id="tree">
+				<li class="down">me
+					<ul>
+						<li>anno</li>
+						<li>saharnooby</li>
+					</ul>
+				</li>
+				<li class="down">net
+					<ul>
+						<li>boeckling</li>
+						<li>sf</li>
+					</ul>
+				</li>
+				<li class="down">org
+					<ul>
+						<li>apache</li>
+						<li>hsluv</li>
+						<li>joml</li>
+						<li>lwjgl</li>
+						<li>newdawn</li>
+						<li>the3deers</li>
+					</ul>
+				</li>
+			</ul>
+		</div>
+	</div>
+	<div class="content">
+		<div id="docs">
+			<h1 id="title"><span class="keyword">object</span> Engine</h1>
+			<div style="margin-left: 1em;">
+				<p><a id="githubLink" href="https://github.com/AntonioNoack/RemsEngine/blob/master/src/me/anno/Engine.kt" target="_blank">See Source Code</a></p>
+				<div id="classDocs"></div>
+				<h2>Super Classes</h2>
+				<div id="superClasses" style="margin-left: 1em;"></div>
+				<h2>Methods</h2>
+				<div id="methods" style="margin-left: 1em"><p class="annotation">@JvmStatic</p><p><span class="keyword"> fun</span> <span class="name">updateTime</span>(): <span class="type">Unit</span></p><p class="annotation">@JvmStatic</p><p><span class="keyword"> fun</span> <span class="name">updateTime</span>(<span class="param">dt</span>: <span class="type">Float</span>, <span class="param">thisTime</span>: <span class="type">Long</span>): <span class="type">Unit</span></p><p class="annotation">@JvmStatic</p><p><span class="keyword"> fun</span> <span class="name">requestShutdown</span>(): <span class="type">Unit</span></p></div>
+				<h2>Fields</h2>
+				<div id="fields" style="margin-left: 1em"><p class="annotation">@JvmField</p><p><span class="keyword">var</span> <span class="name">projectName</span>: <span class="type">String</span></p><p class="annotation">@JvmField</p><p><span class="keyword">var</span> <span class="name">rawDeltaTime</span>: <span class="type">Float</span></p><p class="annotation">@JvmField</p><p><span class="keyword">var</span> <span class="name">deltaTime</span>: <span class="type">Float</span></p><p class="annotation">@JvmField</p><p><span class="keyword">var</span> <span class="name">currentFPS</span>: <span class="type">Float</span></p><p class="annotation">@JvmField</p><p><span class="keyword">val</span> <span class="name">startTime</span>: <span class="type">Long</span></p><p class="annotation">@JvmStatic</p><p><span class="keyword">private var</span> <span class="name">lastTime</span>: <span class="type">Long</span></p><p class="annotation">@JvmField</p><p><span class="keyword">val</span> <span class="name">startDateTime</span>: <span class="type">Long</span></p><p class="comment">time at this moment since the engine started; in nanoseconds</p><p class="annotation">@JvmStatic</p><p><span class="keyword">val</span> <span class="name">nanoTime</span>: <span class="type">Long</span></p><p class="comment">time of current frame; since the engine started; in nanoseconds<br>use gameTimeF for a float value</p><p class="annotation">@JvmStatic</p><p><span class="keyword">var private-get</span> <span class="name">gameTime</span>: <span class="type">Long</span></p><p class="annotation">@JvmStatic</p><p><span class="keyword">var private-get</span> <span class="name">lastGameTime</span>: <span class="type">Long</span></p><p class="annotation">@JvmStatic</p><p><span class="keyword">var private-get</span> <span class="name">gameTimeF</span>: <span class="type">Float</span></p><p class="annotation">@JvmStatic</p><p><span class="keyword">var private-get</span> <span class="name">gameTimeD</span>: <span class="type">Double</span></p><p class="annotation">@JvmStatic</p><p><span class="keyword">var private-get</span> <span class="name">frameIndex</span>: <span class="type">Int</span></p><p class="annotation">@JvmStatic</p><p><span class="keyword">var private-get</span> <span class="name">shutdown</span>: <span class="type">Boolean</span></p></div>
+			</div>
+		</div><div id="searchResultsSec" style="display: none">
+			<h1>Search Results</h1>
+			<div id="searchResults"></div>
+		</div>
+	</div>
+</div>
+
+<div id="footer"><a href="https://phychi.com/impressum">Copyright Antonio Noack, 2023, Icons from Intellij</a></div>
+
+<script src="scripts/unzipit.min.js"></script>
+<script src="scripts/index.js"></script>
+</body>
+</html>
