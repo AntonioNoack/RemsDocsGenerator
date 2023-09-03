@@ -1,5 +1,7 @@
 
 let maxNumResults = 250
+let baseURL = window.location.href.split('?')[0]
+let typeIndex = {}
 
 async function unzipDocs() {
 	const {entries} = await unzipit.unzip('docs.zip');
@@ -7,6 +9,7 @@ async function unzipDocs() {
 	
 		let data = window.data = await entry.json()
 		tree.innerHTML = '' // clear static tree
+		createTypeIndex(data, null)
 		createTree(tree, data, 0, null)
 		
 		let firstPage = new URLSearchParams(window.location.search).get('page') || 'me/anno/Engine'
@@ -14,6 +17,16 @@ async function unzipDocs() {
 	});
 }
 unzipDocs()
+
+function createTypeIndex(data, path) {
+	for(key in data) {
+		if(key.length == 1) continue
+		let subPath = path ? path + '/' + key : key
+		typeIndex[key] = typeIndex[key] === undefined ? subPath : null
+		typeIndex[subPath.split('/').join('.')] = subPath
+		createTypeIndex(data[key], subPath)
+	}
+}
 
 function endsWith(hay, needle){
 	return hay.length >= needle.length &&
@@ -74,8 +87,6 @@ searchBar.onkeydown = (e) => {
 					child.innerText = 'Cancelled search, because of too numerous results...'
 					searchResults.appendChild(child)
 				}
-				
-				console.log('Search result:', result)
 			} else searchResults.innerHTML = 'No results were found'
 		}
 	}
@@ -86,8 +97,10 @@ function openPath(path) {
 	let parts = path.split('/')
 	parts.forEach(part => {
 		obj = obj[part] || obj
+		obj.q?.()
 	})
-	displayClass(obj, path, parts[parts.length-1])
+	let path1 = parts.slice(0,Math.max(parts.length-1,0)).join('/')
+	displayClass(obj, path1, path, parts[parts.length-1])
 }
 
 function search(data, term, path, result) {
@@ -143,11 +156,109 @@ function isKeyword(k){
 	return k[0] != '*' && k[0] != '@'
 }
 
-function formatType(t){
-	return t.split('<').join('&lt;').split('>').join('&gt;')
+// define links for standard library
+let stdlibBase = 'https://kotlinlang.org/api/latest/jvm/stdlib/'
+let stdlib = {
+	'kotlin.collections': 'Map,List,Set,HashSet,HashMap,ArrayList,LinkedList,MutableList,MutableSet,MutableMap,Iterator,Collection',
+	'kotlin': 'Boolean,Byte,Short,Char,Int,Long,Float,Double,String,Unit,BooleanArray,ByteArray,ShortArray,CharArray,IntArray,LongArray,FloatArray,DoubleArray,Array,String,Unit,Any,Nothing,CharSequence,Exception,RuntimeException,Pair,Triple,Comparator',
+	'kotlin.reflect': 'KClass',
+	'kotlin.text': 'StringBuilder,Charset',
+	'kotlin.io': 'InputStream,OutputStream'
+}
+for(key in stdlib){
+	let baseURL = stdlibBase + key + '/'
+	stdlib[key].split(',').forEach(name => {
+		let name1 = name.split('').map(x => x == x.toLowerCase() ? x : '-'+x.toLowerCase()).join('')
+		typeIndex[name] = baseURL + name1
+	})
 }
 
-function displayClass(dataK, subPath, key) {
+let oracle = 'https://docs.oracle.com/javase/8/docs/api/java/'
+let nioBase = oracle + 'nio/'
+'ByteBuffer,ShortBuffer,IntBuffer,FloatBuffer'.split(',').forEach(key => {
+	typeIndex[key] = nioBase + key + '.html'
+})
+typeIndex['LinkedBlockingQueue'] = oracle + 'util/concurrent/LinkedBlockingQueue.html'
+typeIndex['WeakHashMap'] = oracle + 'util/WeakHashMap.html'
+typeIndex['Queue'] = oracle + 'util/Queue.html'
+typeIndex['URI'] = oracle + 'net/URI.html'
+typeIndex['URL'] = oracle + 'net/URL.html'
+typeIndex['Class'] = oracle + 'lang/Class.html'
+typeIndex['Thread'] = oracle + 'lang/Thread.html'
+'File,DataInputStream,DataOutputStream,InetAddress,Socket,Closeable'.split(',').forEach(name => {
+	typeIndex[name] = oracle + 'io/'+name+'.html'
+})
+
+typeIndex['AtomicBoolean'] = oracle + 'util/concurrent/atomic/AtomicBoolean.html'
+typeIndex['AtomicInteger'] = oracle + 'util/concurrent/atomic/AtomicInteger.html'
+typeIndex['AtomicLong'] = oracle + 'util/concurrent/atomic/AtomicLong.html'
+
+function formatType(typeName) {
+	
+	// console.log('formatting', typeName)
+	
+	if(typeName == 'Void') typeName = 'Unit' // weird
+	if(typeName == 'Void?') typeName = 'Unit?' // weird
+	
+	if(typeName[0] == '(' && typeName[typeName.length-1] == ')'){
+		return '('+formatType(typeName.substr(1,typeName.length-2))+')'
+	}
+	
+	if(typeName[0] == '(' && endsWith(typeName,')?')){
+		return '('+formatType(typeName.substr(1,typeName.length-3))+')?'
+	}
+	
+	if(typeName[0] == '(' && typeName.indexOf(')->') > 0){
+		// split them... (Map<A,B>,C)->X
+		let i = typeName.indexOf(')->')
+		let j = 1, k = j, depth = 0
+		let params = []
+		let name = null
+		for(;k<i;k++){
+			// : is a hack here, as the name is lowercase, and unlikely to be linked
+			if((typeName[k]==':') && depth==0) {
+				name=typeName.substring(j,k)
+				j=k+1
+			}
+			if((typeName[k]==',') && depth==0) {
+				params.push([name,typeName.substring(j,k)])
+				name=null
+				j=k+1
+			}
+			else if(typeName[k]=='<') depth++
+			else if(typeName[k]=='>') depth--
+		}
+		params.push([name,typeName.substring(j,i)])
+		return '(' + params.map(t => (t[0] ? t[0] + ':' : '') + formatType(t[1])).join(',') + ')-&gt;'+formatType(typeName.substring(i+3))
+	}
+	
+	if(typeName.indexOf('<') > 0 && typeName.indexOf('>') > 0){
+		let i = typeName.indexOf('<'), e = typeName.lastIndexOf('>')
+		let j = i+1, k = j, depth = 0
+		let params = []
+		for(;k<e;k++){
+			if(typeName[k]==',' && depth==0) {
+				params.push(typeName.substring(j,k))
+				j=k+1
+			}
+			else if(typeName[k]=='<') depth++
+			else if(typeName[k]=='>') depth--
+		}
+		params.push(typeName.substring(j,e))
+		return formatType(typeName.substring(0,i)) + '&lt;' + params.map(formatType).join(',') + '&gt;' + typeName.substr(e+1)
+	}
+	
+	// todo types in generics could be linked
+	// todo types in lambdas
+	let simpleName = typeName.split('?')[0].split('<')[0]
+	let link = typeIndex[simpleName]
+	if(!link) console.log('Unknown type:', simpleName)
+	let escapedName = typeName.split('<').join('&lt;').split('>').join('&gt;')
+	let fullLink = link && (link.indexOf('https://') == 0 ? link : baseURL + '?page='+typeIndex[simpleName])
+	return link ? '<a href="' + fullLink + '">' + escapedName + '</a>' : escapedName
+}
+
+function displayClass(dataK, path, subPath, key) {
 	searchResultsSec.style.display = 'none'
 	docs.style.display = ''
 	let kw = dataK.k || []
@@ -175,6 +286,16 @@ function displayClass(dataK, subPath, key) {
 		superClasses.innerHTML += '<b class="type">' + formatType(type) + '</b>'
 	})
 	fields.innerHTML = ''
+	if(!isNaN(dataK) || !isNaN(dataK.o)){
+		let ordinal = !isNaN(dataK) ? dataK : dataK.o
+		let pi = document.createElement('p')
+		pi.classList.add('comment')
+		pi.innerHTML = 'Ordinal: ' + ordinal
+		classDocs.appendChild(pi)
+		let typeName = subPath.split('/')
+		typeName = typeName[typeName.length-2]
+		superClasses.innerHTML += '<b class="type">' + formatType(typeName) + '</b>'
+	}
 	if(dataK.f) dataK.f.forEach((field) => {
 		// name, keywords, type
 		field[1].filter(k => k[0] == '*').forEach(k => {
@@ -212,7 +333,7 @@ function displayClass(dataK, subPath, key) {
 		let p = document.createElement('p')
 		let params = method[1]
 		p.innerHTML += '<span class="keyword">' + method[2].filter(isKeyword).join(' ') + (isConstructor ? ' constructor' : ' fun') + '</span>' + (isConstructor ? '' : ' <span class="name">' + method[0] + '</span>') + '(' +
-		[...Array(params.length/2).keys()].map(i => '<span class="param">' + params[i*2] + '</span>: <span class="type">' + params[i*2+1] + '</span>').join(', ') + 
+		[...Array(params.length/2).keys()].map(i => '<span class="param">' + params[i*2] + '</span>: <span class="type">' + formatType(params[i*2+1]) + '</span>').join(', ') + 
 		(isConstructor ? ')' : '): <span class="type">' + formatType(method[3]||'?') + '</span>')
 		methods.appendChild(p)
 	})
@@ -226,17 +347,16 @@ function isKtFile(kw,dataK) {
 }
 
 function createTree(ul, data, depth, path) {
-	console.log(data)
-	sortObject(data)
 	let sortedProperties = sortObject(data)
 	let unfoldAutomatically = sortedProperties.length == 1 || depth == 0;
 	sortedProperties.forEach((key0) => {
+		
 		let key = key0
 		let li = document.createElement('li')
 		li.innerHTML = '<span>' + key + '</span>'
 		let dataK = data[key]
 		let kw = dataK.k || []
-	
+		
 		if(kw.indexOf('object') >= 0 || kw.indexOf('companion') >= 0) li.classList.add('ktObject')
 		if(kw.indexOf('interface') >= 0 || !isNaN(dataK.o)) li.classList.add('ktObject')
 		if(kw.indexOf('companion') >= 0) li.classList.add('ktCompanion')
@@ -253,6 +373,12 @@ function createTree(ul, data, depth, path) {
 			}
 		}
 		
+		dataK.q = () => {
+			if(childList.style.display == 'none' || childList.children.length == 0) {
+				unfold()
+			}
+		}
+		
 		let childList = document.createElement('ul')
 		childList.style.display = 'none'
 		li.appendChild(childList)
@@ -260,7 +386,7 @@ function createTree(ul, data, depth, path) {
 		li.onclick = (e) => {
 			if(childList.style.display == 'none' || childList.children.length == 0) {
 				unfold()
-				displayClass(dataK, subPath, key)
+				displayClass(dataK, path, subPath, key)
 			} else {
 				li.classList.remove('down')
 				childList.style.display = 'none'
@@ -268,6 +394,5 @@ function createTree(ul, data, depth, path) {
 			e.stopPropagation()
 		}
 		ul.appendChild(li)
-	
 	})
 }

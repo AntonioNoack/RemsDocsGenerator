@@ -68,6 +68,10 @@ p a {
 	color: #ddd;
 }
 
+.type a {
+	color: #ddd;
+}
+
 .comment {
 	color: #7f7;
 	margin-bottom: -0.8em;

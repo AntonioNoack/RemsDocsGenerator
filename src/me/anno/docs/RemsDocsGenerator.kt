@@ -15,11 +15,10 @@ import java.util.zip.ZipOutputStream
 //  - compress it by combining common terms (?) depends on size
 //  - index the most common terms / via compression (?) depends on size
 
-// todo links for all types (most type names are unique)
 // todo google-indexability: add links to the tree (?)
 // todo highlight currently shown page in tree
-// todo when clicking on a search result, also open the tree there
-// todo show ordinal for enums
+// todo use generics to "blacklist" type names, like in https://remsengine.phychi.com/docs/?page=me/anno/graph/octtree/KdTree, where Point is incorrectly linked
+// todo compact (no forced line breaks) list for all child classes (inheritance) for each type
 
 // generate space-efficient online documentation, that is also searchable
 val modules = listOf("src", "KOML", "SDF", "Bullet", "Box2D", "Recast", "Lua", "PDF")
