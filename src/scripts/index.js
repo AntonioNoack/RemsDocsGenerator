@@ -12,11 +12,17 @@ async function unzipDocs() {
 		createTypeIndex(data, null)
 		createTree(tree, data, 0, null)
 		
-		let firstPage = new URLSearchParams(window.location.search).get('page') || 'me/anno/Engine'
-		openPath(firstPage.split('.').join('/'))
+		openPathByURL()
 	});
 }
 unzipDocs()
+
+function openPathByURL(){
+	let firstPage = new URLSearchParams(window.location.search).get('page') || 'me/anno/Engine'
+	openPath(firstPage.split('.').join('/'))
+}
+
+window.addEventListener('popstate', () => { openPathByURL() });
 
 function createTypeIndex(data, path) {
 	for(key in data) {
@@ -387,7 +393,10 @@ function displayClass(dataK, path, subPath, key) {
 			methods.appendChild(p)
 		})
 	} else methodTitle.style.display = 'none'
-	window.history.replaceState(subPath, key, window.location.href.split('?')[0] + "?page=" + subPath)
+	companionTitle.innerText = key == 'Companion' ? [subPath.split('/')].map(x => x[x.length-2])[0] : dataK.Companion ? 'Companion' : ''
+	companionTitle.href = key == 'Companion' ? '?page=' + path : dataK.Companion ? '?page=' + subPath + '/Companion' : ''
+	let subPath2 = new URLSearchParams(window.location.search).get('page')
+	if(subPath2 != subPath) window.history.pushState(subPath, key, window.location.href.split('?')[0] + "?page=" + subPath)
 }
 
 function isKtFile(kw,dataK) {

@@ -21,7 +21,6 @@ import java.util.zip.ZipOutputStream
 // todo url for search results?
 
 // todo Hierarchy object is incomplete src/me/anno/ecs/prefab/Hierarchy.kt
-// todo Companions need to be linked forward and back...
 
 // generate space-efficient online documentation, that is also searchable
 val modules = listOf("src", "KOML/src", "SDF/src", "Bullet/src", "Box2D/src", "Recast/src", "Lua/src", "PDF/src")
