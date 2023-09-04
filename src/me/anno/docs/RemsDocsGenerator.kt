@@ -17,7 +17,6 @@ import java.util.zip.ZipOutputStream
 
 // todo google-indexability: add links to the tree (?)
 // todo highlight currently shown page in tree
-// todo use generics to "blacklist" type names, like in https://remsengine.phychi.com/docs/?page=me/anno/graph/octtree/KdTree, where Point is incorrectly linked
 // todo url for search results?
 
 // todo Hierarchy object is incomplete src/me/anno/ecs/prefab/Hierarchy.kt

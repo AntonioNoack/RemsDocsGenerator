@@ -166,7 +166,7 @@ function isKeyword(k){
 let stdlibBase = 'https://kotlinlang.org/api/latest/jvm/stdlib/'
 let stdlib = {
 	'kotlin.collections/': 'Map,List,Set,HashSet,HashMap,ArrayList,LinkedList,MutableList,MutableSet,MutableMap,Iterable,Iterator,Collection',
-	'kotlin/': 'Boolean,Byte,Short,Char,Int,Long,Float,Double,UByte,UShort,UInt,ULong,String,Unit,BooleanArray,ByteArray,ShortArray,CharArray,IntArray,LongArray,FloatArray,DoubleArray,Array,String,Unit,Any,Nothing,CharSequence,Throwable,Exception,RuntimeException,Pair,Triple,Comparator,Comparable',
+	'kotlin/': 'Boolean,Byte,Short,Char,Int,Long,Float,Double,UByte,UShort,UInt,ULong,String,Unit,BooleanArray,ByteArray,ShortArray,CharArray,IntArray,LongArray,FloatArray,DoubleArray,Array,String,Unit,Any,Nothing,CharSequence,Throwable,Exception,RuntimeException,Pair,Triple,Comparator,Comparable,Lazy',
 	'kotlin.reflect/': 'KClass',
 	'kotlin.text/': 'StringBuilder,Charset',
 	'kotlin.io/java.io.': 'InputStream,OutputStream',
@@ -193,7 +193,7 @@ typeIndex['URI'] = oracle + 'net/URI.html'
 typeIndex['URL'] = oracle + 'net/URL.html'
 typeIndex['Class'] = oracle + 'lang/Class.html'
 typeIndex['Thread'] = oracle + 'lang/Thread.html'
-'File,DataInputStream,DataOutputStream,InetAddress,Socket,Closeable'.split(',').forEach(name => {
+'File,DataInputStream,DataOutputStream,InetAddress,Socket,Closeable,BufferedReader,BufferedWriter'.split(',').forEach(name => {
 	typeIndex[name] = oracle + 'io/'+name+'.html'
 })
 
@@ -260,7 +260,7 @@ function formatType(typeName, ignored) {
 	let simpleName = typeName.split('?')[0].split('<')[0]
 	let link = typeIndex[simpleName]
 	let isIgnored = Array.isArray(ignored) && ignored.indexOf(simpleName)>=0
-	if(!link && !isIgnored) console.log('Unknown type:', simpleName, ignored)
+	if(!link && !isIgnored) console.log('Unknown type:', simpleName)
 	let escapedName = typeName.split('<').join('&lt;').split('>').join('&gt;')
 	let fullLink = link && !isIgnored && (link.indexOf('https://') == 0 ? link : baseURL + '?page='+typeIndex[simpleName])
 	return link ? '<a class="type" href="' + fullLink + '">' + escapedName + '</a>' : isIgnored ? '<span class="generic">' + escapedName + '</span>' : escapedName
@@ -310,6 +310,7 @@ function displayClass(dataK, path, subPath, key) {
 	superClasses.innerHTML = ''
 	if(dataK.s) {
 		superClassTitle.style.display = ''
+		superClassTitle.innerText = isNaN(dataK.o) ? 'Super Classes' : 'Class'
 		dataK.s.forEach((type) => {
 			if(superClasses.innerText.length > 0) superClasses.innerHTML += ", "
 			superClasses.innerHTML += '<b class="type">' + formatType(type) + '</b>'
