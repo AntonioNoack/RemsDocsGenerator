@@ -16,10 +16,10 @@ import java.util.zip.ZipOutputStream
 //  - index the most common terms / via compression (?) depends on size
 
 // todo google-indexability: add links to the tree (?)
-// todo highlight currently shown page in tree
-// todo url for search results?
 
 // todo Hierarchy object is incomplete src/me/anno/ecs/prefab/Hierarchy.kt
+// todo properly find types using reflection, where extension methods are used
+// todo make links in documentation link to target
 
 // generate space-efficient online documentation, that is also searchable
 val modules = listOf("src", "KOML/src", "SDF/src", "Bullet/src", "Box2D/src", "Recast/src", "Lua/src", "PDF/src")

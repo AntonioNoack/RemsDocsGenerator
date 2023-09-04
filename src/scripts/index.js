@@ -2,6 +2,7 @@
 let maxNumResults = 250
 let baseURL = window.location.href.split('?')[0]
 let typeIndex = {}
+let lastCurrent = null
 
 async function unzipDocs() {
 	const {entries} = await unzipit.unzip('docs.zip');
@@ -18,8 +19,14 @@ async function unzipDocs() {
 unzipDocs()
 
 function openPathByURL(){
-	let firstPage = new URLSearchParams(window.location.search).get('page') || 'me/anno/Engine'
-	openPath(firstPage.split('.').join('/'))
+	let params = new URLSearchParams(window.location.search)
+	let search = params.get('search') || ''
+	if(search.length) {
+		runSearch(search)
+	} else {
+		let firstPage = params.get('page') || 'me/anno/Engine'
+		openPath(firstPage.split('.').join('/'))
+	}
 }
 
 window.addEventListener('popstate', () => { openPathByURL() });
@@ -39,62 +46,66 @@ function endsWith(hay, needle){
 		hay.substr(hay.length-needle.length, needle.length) == needle
 }
 
+function runSearch(term) {
+	let result = []
+	search(data, term, null, result)
+	searchResultsSec.style.display = ''
+	docs.style.display = 'none'
+	searchResults.innerHTML = ''
+	if(result.length){
+		if(term.indexOf(' ') < 0) {
+			// try to find class, prefer to have it first
+			let end = '/' + term
+			result.forEach(r => {
+				r.push(
+					endsWith(r[0].toLowerCase(), end)?2:
+					r[0].toLowerCase().indexOf(end)>=0?1.5:-1/r[1].length
+				);
+			})
+			result.sort((a,b) => b[2]-a[2])
+		}
+		result.forEach(r => {
+			let child = document.createElement('p')
+			let path = r[0]
+			child.onclick = () => { openPath(path) }
+			child.style.cursor = 'pointer'
+			child.innerHTML = '<span class="name">' + path + '</span>' + ': ' + r[1].map(ri => {
+				let i = 0
+				let ril = ri
+					.split('\n').join('\\n')
+					.split('<b>').join('')
+					.split('</b>').join('')
+					.toLowerCase()
+				let res = ''
+				while(true){
+					let j = ril.indexOf(term,i)
+					if(j >= 0) {
+						res += ri.substr(i,j-i)
+						res += '<b>'+ri.substr(j,term.length)+'</b>'
+						i = j+term.length
+					} else {
+						res += ri.substr(i)
+						break
+					}
+				}
+				return '<span class="comment">' + res + '</span>'
+			}).join(', ')
+			searchResults.appendChild(child)
+		})
+		if(result.length >= maxNumResults) {
+			let child = document.createElement('p')
+			child.innerText = 'Cancelled search, because of too numerous results...'
+			searchResults.appendChild(child)
+		}
+	} else searchResults.innerHTML = 'No results were found'
+	let term2 = new URLSearchParams(window.location.search).get('search')
+	if(term2 != term) window.history.pushState('?'+term, null, window.location.href.split('?')[0] + "?search=" + term)
+}
+
 searchBar.onkeydown = (e) => {
 	if(e.keyCode == 13) {
 		let term = searchBar.value.trim().toLowerCase()
-		if(term.length) {
-			let result = []
-			search(data, term, null, result)
-			searchResultsSec.style.display = ''
-			docs.style.display = 'none'
-			searchResults.innerHTML = ''
-			if(result.length){
-				if(term.indexOf(' ') < 0) {
-					// try to find class, prefer to have it first
-					let end = '/' + term
-					result.forEach(r => {
-						r.push(
-							endsWith(r[0].toLowerCase(), end)?2:
-							r[0].toLowerCase().indexOf(end)>=0?1.5:-1/r[1].length
-						);
-					})
-					result.sort((a,b) => b[2]-a[2])
-				}
-				result.forEach(r => {
-					let child = document.createElement('p')
-					let path = r[0]
-					child.onclick = () => { openPath(path) }
-					child.style.cursor = 'pointer'
-					child.innerHTML = '<span class="name">' + path + '</span>' + ': ' + r[1].map(ri => {
-						let i = 0
-						let ril = ri
-							.split('\n').join('\\n')
-							.split('<b>').join('')
-							.split('</b>').join('')
-							.toLowerCase()
-						let res = ''
-						while(true){
-							let j = ril.indexOf(term,i)
-							if(j >= 0) {
-								res += ri.substr(i,j-i)
-								res += '<b>'+ri.substr(j,term.length)+'</b>'
-								i = j+term.length
-							} else {
-								res += ri.substr(i)
-								break
-							}
-						}
-						return '<span class="comment">' + res + '</span>'
-					}).join(', ')
-					searchResults.appendChild(child)
-				})
-				if(result.length >= maxNumResults) {
-					let child = document.createElement('p')
-					child.innerText = 'Cancelled search, because of too numerous results...'
-					searchResults.appendChild(child)
-				}
-			} else searchResults.innerHTML = 'No results were found'
-		}
+		if(term.length) runSearch(term)
 	}
 }
 
@@ -257,6 +268,10 @@ function formatType(typeName, ignored) {
 		return formatType(typeName.substring(0,i), ignored) + '&lt;' + params.map(t => formatType(t, ignored)).join(', ') + '&gt;' + typeName.substr(e+1)
 	}
 	
+	if(typeName.indexOf('.') >= 0) {
+		return typeName.split('.').map(t => formatType(t,ignored)).join('.')
+	}
+	
 	let simpleName = typeName.split('?')[0].split('<')[0]
 	let link = typeIndex[simpleName]
 	let isIgnored = Array.isArray(ignored) && ignored.indexOf(simpleName)>=0
@@ -396,8 +411,13 @@ function displayClass(dataK, path, subPath, key) {
 	} else methodTitle.style.display = 'none'
 	companionTitle.innerText = key == 'Companion' ? [subPath.split('/')].map(x => x[x.length-2])[0] : dataK.Companion ? 'Companion' : ''
 	companionTitle.href = key == 'Companion' ? '?page=' + path : dataK.Companion ? '?page=' + subPath + '/Companion' : ''
+	companionTitle.onclick = (e) => {
+		openPath(companionTitle.href.split('=')[1])
+		return false // prevent default and propagation
+	}
+	dataK?.x?.()
 	let subPath2 = new URLSearchParams(window.location.search).get('page')
-	if(subPath2 != subPath) window.history.pushState(subPath, key, window.location.href.split('?')[0] + "?page=" + subPath)
+	if(subPath2 != subPath) window.history.pushState(subPath, null, window.location.href.split('?')[0] + "?page=" + subPath)
 }
 
 function isKtFile(kw,dataK) {
@@ -413,7 +433,9 @@ function createTree(ul, data, depth, path) {
 		
 		let key = key0
 		let li = document.createElement('li')
-		li.innerHTML = '<span>' + key + '</span>'
+		let lis = document.createElement('span')
+		lis.innerText = key
+		li.appendChild(lis)
 		let dataK = data[key]
 		let kw = dataK.k || []
 		
@@ -437,6 +459,12 @@ function createTree(ul, data, depth, path) {
 			if(childList.style.display == 'none' || childList.children.length == 0) {
 				unfold()
 			}
+		}
+		
+		dataK.x = () => {
+			lastCurrent?.classList?.remove?.('current')
+			lis.classList.add('current')
+			lastCurrent = lis
 		}
 		
 		let childList = document.createElement('ul')

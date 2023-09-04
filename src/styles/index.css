@@ -101,6 +101,10 @@ input {
 	margin-left: 1em;
 }
 
+.current {
+	color: #ffe424
+}
+
 ::placeholder {
    text-align: center;
 }
