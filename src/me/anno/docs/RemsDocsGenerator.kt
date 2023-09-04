@@ -18,16 +18,22 @@ import java.util.zip.ZipOutputStream
 // todo google-indexability: add links to the tree (?)
 // todo highlight currently shown page in tree
 // todo use generics to "blacklist" type names, like in https://remsengine.phychi.com/docs/?page=me/anno/graph/octtree/KdTree, where Point is incorrectly linked
-// todo compact (no forced line breaks) list for all child classes (inheritance) for each type
+// todo url for search results?
+
+// todo Hierarchy object is incomplete src/me/anno/ecs/prefab/Hierarchy.kt
+// todo Companions need to be linked forward and back...
 
 // generate space-efficient online documentation, that is also searchable
-val modules = listOf("src", "KOML", "SDF", "Bullet", "Box2D", "Recast", "Lua", "PDF")
+val modules = listOf("src", "KOML/src", "SDF/src", "Bullet/src", "Box2D/src", "Recast/src", "Lua/src", "PDF/src")
 fun main() {
 
     val src = documents.getChild("IdeaProjects/VideoStudio")
     for (module in modules) {
         collect(src.getChild(module), module)
     }
+
+    createTypeIndex(all)
+    indexChildClasses(all)
 
     // save data into zip file
     val dst = documents.getChild("IdeaProjects/RemsDocsGenerator/src/docs.zip")
@@ -40,7 +46,30 @@ fun main() {
 
 }
 
+fun createTypeIndex(scope: Scope) {
+    if ("class" in scope.keywords || "interface" in scope.keywords) {
+        typeIndex[scope.name] = if (typeIndex[scope.name] == null) scope else invalid
+    }
+    for (child in scope.children.values) {
+        createTypeIndex(child)
+    }
+}
+
+fun indexChildClasses(scope: Scope) {
+    for (type in scope.superTypes) {
+        val sc = typeIndex[type.name]
+        if (sc != null && sc != invalid) {
+            sc.childClasses.add(scope)
+        }
+    }
+    for (child in scope.children.values) {
+        indexChildClasses(child)
+    }
+}
+
+val typeIndex = HashMap<String, Scope>()
 val all = Scope("", null, modules.first())
+val invalid = Scope("", null, "")
 val UnitType = Type("Unit", emptyList(), emptyList(), false)
 
 fun collect(folder: FileReference, module: String) {
@@ -185,14 +214,6 @@ fun indexKotlin(file: FileReference, module: String) {
                     return false
                 }
 
-                fun readPackageName(): CharSequence {
-                    var name = read()!!
-                    while (consume(".")) {
-                        name = "$name.${read()}"
-                    }
-                    return name
-                }
-
                 fun skipParameterValue() {
                     val pos0 = pos
                     val line0 = line
@@ -291,7 +312,7 @@ fun indexKotlin(file: FileReference, module: String) {
                             keywords.add("*$value")
                         } else keywords.add("@$name") // weird
                     } else {
-                        if (name != "Suppress") keywords.add("@$name")
+                        if (name != "Suppress" && name != "JvmStatic" && name != "JvmField") keywords.add("@$name")
                         if (consume("(")) skipBlock("(", ")")
                     }
                 }
@@ -308,7 +329,7 @@ fun indexKotlin(file: FileReference, module: String) {
                     return dst
                 }
 
-                val paramKeywords = listOf("private", "projected", "var", "val", "open", "override", "final")
+                val paramKeywords = listOf("private", "projected", "var", "val", "open", "override", "final", "vararg")
                 fun readType(scope: Scope? = null): Type {
                     val name = if (consume("(")) {
                         val bld = StringBuilder()
@@ -339,12 +360,14 @@ fun indexKotlin(file: FileReference, module: String) {
                     }
                     if (scope != null) { // supports arguments
                         val scopeI = scope.getChild(name, module)
+                        copyKeywords(scopeI.keywords)
                         if (consume("private")) keywords.add("private")
                         if (consume("protected")) keywords.add("protected")
                         if (consume("override")) keywords.add("override")
                         consume("constructor")
-                        copyKeywords(scopeI.keywords)
                         if (consume("(")) {
+                            val kw = copyKeywords()
+                            val params = ArrayList<Parameter>()
                             while (!consume(")")) {
                                 consumeAnnotations()
                                 var paramName = read()!!
@@ -357,13 +380,15 @@ fun indexKotlin(file: FileReference, module: String) {
                                     paramName = read()!!
                                 }
                                 if (!consume(":")) throw IllegalStateException("Expected colon for type, but got ${read()} in $line, $file")
-                                val type = readType(null)
+                                val type = readType()
+                                params.add(Parameter(paramName, type, "vararg" in keywords, false))
                                 if ("var" in keywords || "val" in keywords) {
                                     scopeI.fields.add(Field(paramName, type, copyKeywords()))
                                 }
                                 if (consume("=")) skipParameterValue()
                                 consume(",")
                             }
+                            scopeI.methods.add(Method("", emptyList(), params, null, kw))
                         }
                     }
                     val superTypes = ArrayList<Type>()
@@ -387,7 +412,8 @@ fun indexKotlin(file: FileReference, module: String) {
                     return Type(name, generics, superTypes, isNullable)
                 }
 
-                when (val tk = read() ?: break) {
+                val tk = read() ?: break
+                when (tk) {
                     "package" -> {
                         do {
                             scope = scope.getChild(read()!!, module)
@@ -395,8 +421,14 @@ fun indexKotlin(file: FileReference, module: String) {
                     }
 
                     "import" -> {
-                        val name = readPackageName()
-                        scope.imports.add(name)
+                        /*var name = read()!!
+                        while (consume(".")) {
+                            name = "$name.${read()}"
+                        }
+                        scope.imports.add(name)*/
+                        do {
+                            read()
+                        } while (consume("."))
                     }
 
                     "class", "interface" -> {
@@ -432,6 +464,7 @@ fun indexKotlin(file: FileReference, module: String) {
                                 readClassBody(child)
                             }
                         } else {
+                            // println("reading fun $name, $keywords")
                             // read function
                             while (true) {
                                 if (consume("?")) {
@@ -523,8 +556,10 @@ fun indexKotlin(file: FileReference, module: String) {
                         if (consume("=") || consume("by")) {
                             skipEval()
                         }
-                        if (consume("private")) keywords.add("private-get")
+                        var private = false
+                        if (consume("private")) private = true
                         if (consume("get")) {
+                            if (private) keywords.add("private-get")
                             if (read() != "(") throw IllegalStateException()
                             if (read() != ")") throw IllegalStateException()
                             if (consume(":")) {
@@ -536,8 +571,9 @@ fun indexKotlin(file: FileReference, module: String) {
                                 skipEval()
                             } else throw IllegalStateException("Expected { or = after get in $line, $file")
                         }
-                        consume("private-set")
+                        if (!private && consume("private")) private = true
                         if (consume("set")) {
+                            if (private) keywords.add("private-set")
                             if (consume("(")) {
                                 if (read() != null && read() == ")") {
                                     if (consume("{")) {
@@ -549,6 +585,7 @@ fun indexKotlin(file: FileReference, module: String) {
                             }
                         }
                         scope.fields.add(Field(name, type, copyKeywords()))
+                        if (private) keywords.add("private")
                     }
 
                     "open", "protected", "private", "public", "abstract", "override", "operator",
@@ -631,6 +668,8 @@ fun indexKotlin(file: FileReference, module: String) {
                                     }
                                     val child1 = child.getChild(name, module)
                                     child1.enumOrdinal = i++
+                                    child1.superTypes.add(Type(child.name, emptyList(), emptyList(), false))
+                                    child.childClasses.add(child1)
                                     copyKeywords(child1.keywords)
                                     if (consume("{")) {
                                         // custom body

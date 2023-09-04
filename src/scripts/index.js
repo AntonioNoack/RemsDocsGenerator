@@ -159,16 +159,18 @@ function isKeyword(k){
 // define links for standard library
 let stdlibBase = 'https://kotlinlang.org/api/latest/jvm/stdlib/'
 let stdlib = {
-	'kotlin.collections': 'Map,List,Set,HashSet,HashMap,ArrayList,LinkedList,MutableList,MutableSet,MutableMap,Iterator,Collection',
-	'kotlin': 'Boolean,Byte,Short,Char,Int,Long,Float,Double,String,Unit,BooleanArray,ByteArray,ShortArray,CharArray,IntArray,LongArray,FloatArray,DoubleArray,Array,String,Unit,Any,Nothing,CharSequence,Exception,RuntimeException,Pair,Triple,Comparator',
-	'kotlin.reflect': 'KClass',
-	'kotlin.text': 'StringBuilder,Charset',
-	'kotlin.io': 'InputStream,OutputStream'
+	'kotlin.collections/': 'Map,List,Set,HashSet,HashMap,ArrayList,LinkedList,MutableList,MutableSet,MutableMap,Iterable,Iterator,Collection',
+	'kotlin/': 'Boolean,Byte,Short,Char,Int,Long,Float,Double,UByte,UShort,UInt,ULong,String,Unit,BooleanArray,ByteArray,ShortArray,CharArray,IntArray,LongArray,FloatArray,DoubleArray,Array,String,Unit,Any,Nothing,CharSequence,Throwable,Exception,RuntimeException,Pair,Triple,Comparator,Comparable',
+	'kotlin.reflect/': 'KClass',
+	'kotlin.text/': 'StringBuilder,Charset',
+	'kotlin.io/java.io.': 'InputStream,OutputStream',
+	'kotlin.sequences/': 'Sequence',
+	'kotlin.native/': 'BitSet',
 }
 for(key in stdlib){
-	let baseURL = stdlibBase + key + '/'
+	let baseURL = stdlibBase + key
 	stdlib[key].split(',').forEach(name => {
-		let name1 = name.split('').map(x => x == x.toLowerCase() ? x : '-'+x.toLowerCase()).join('')
+		let name1 = name.split('').map(x => x == x.toLowerCase() ? x : '-'+x.toLowerCase()).join('') + '/'
 		typeIndex[name] = baseURL + name1
 	})
 }
@@ -193,19 +195,20 @@ typeIndex['AtomicBoolean'] = oracle + 'util/concurrent/atomic/AtomicBoolean.html
 typeIndex['AtomicInteger'] = oracle + 'util/concurrent/atomic/AtomicInteger.html'
 typeIndex['AtomicLong'] = oracle + 'util/concurrent/atomic/AtomicLong.html'
 
-function formatType(typeName) {
+function formatType(typeName, ignored) {
 	
 	// console.log('formatting', typeName)
 	
 	if(typeName == 'Void') typeName = 'Unit' // weird
 	if(typeName == 'Void?') typeName = 'Unit?' // weird
+	if(typeName==''||typeName=='*') return typeName;
 	
 	if(typeName[0] == '(' && typeName[typeName.length-1] == ')'){
-		return '('+formatType(typeName.substr(1,typeName.length-2))+')'
+		return '('+formatType(typeName.substr(1,typeName.length-2), ignored)+')'
 	}
 	
 	if(typeName[0] == '(' && endsWith(typeName,')?')){
-		return '('+formatType(typeName.substr(1,typeName.length-3))+')?'
+		return '('+formatType(typeName.substr(1,typeName.length-3), ignored)+')?'
 	}
 	
 	if(typeName[0] == '(' && typeName.indexOf(')->') > 0){
@@ -229,7 +232,7 @@ function formatType(typeName) {
 			else if(typeName[k]=='>') depth--
 		}
 		params.push([name,typeName.substring(j,i)])
-		return '(' + params.map(t => (t[0] ? t[0] + ':' : '') + formatType(t[1])).join(',') + ')-&gt;'+formatType(typeName.substring(i+3))
+		return '(' + params.map(t => (t[0] ? t[0] + ': ' : '') + formatType(t[1], ignored)).join(', ') + ')<nobr>-&gt;</nobr>'+formatType(typeName.substring(i+3), ignored)
 	}
 	
 	if(typeName.indexOf('<') > 0 && typeName.indexOf('>') > 0){
@@ -245,25 +248,43 @@ function formatType(typeName) {
 			else if(typeName[k]=='>') depth--
 		}
 		params.push(typeName.substring(j,e))
-		return formatType(typeName.substring(0,i)) + '&lt;' + params.map(formatType).join(',') + '&gt;' + typeName.substr(e+1)
+		return formatType(typeName.substring(0,i), ignored) + '&lt;' + params.map(t => formatType(t, ignored)).join(', ') + '&gt;' + typeName.substr(e+1)
 	}
 	
-	// todo types in generics could be linked
-	// todo types in lambdas
 	let simpleName = typeName.split('?')[0].split('<')[0]
 	let link = typeIndex[simpleName]
-	if(!link) console.log('Unknown type:', simpleName)
+	let isIgnored = Array.isArray(ignored) && ignored.indexOf(simpleName)>=0
+	if(!link && !isIgnored) console.log('Unknown type:', simpleName, ignored)
 	let escapedName = typeName.split('<').join('&lt;').split('>').join('&gt;')
-	let fullLink = link && (link.indexOf('https://') == 0 ? link : baseURL + '?page='+typeIndex[simpleName])
-	return link ? '<a href="' + fullLink + '">' + escapedName + '</a>' : escapedName
+	let fullLink = link && !isIgnored && (link.indexOf('https://') == 0 ? link : baseURL + '?page='+typeIndex[simpleName])
+	return link ? '<a class="type" href="' + fullLink + '">' + escapedName + '</a>' : isIgnored ? '<span class="generic">' + escapedName + '</span>' : escapedName
+}
+
+function formatComment(c) {
+	// todo make links work
+	// make @param, @throws and such bold
+	return c.split('\n').join('<br>')
+		.split('@param').join('<b>@param</b>')
+		.split('@throws').join('<b>@throws</b>')
+		.split('@return').join('<b>@return</b>')
+		.split('@author').join('<b>@author</b>')
+}
+
+function formatGenerics(g, ignored){
+	let gi = g.indexOf(':')
+	return gi <= 0 ? 
+		'<span class="generic">' + g + '</span>' :
+		'<span class="generic">' + g.substr(0,gi) + '</span>: ' + formatType(g.substr(gi+1), ignored)
 }
 
 function displayClass(dataK, path, subPath, key) {
 	searchResultsSec.style.display = 'none'
 	docs.style.display = ''
 	let kw = dataK.k || []
+	let generics7 = dataK.g || []
+	let generics = generics7.map(g => g.split(':')[0]) // remove type info, now it's just for formatType(,ignored)
 	title.innerHTML = '<span class="keyword">' + kw.filter(isKeyword).join(' ') + '</span> ' + key +
-		(dataK.g ? '&lt;' + dataK.g.join(', ') + '&gt;': '')
+		(generics.length ? '&lt;' + generics7.map(g => formatGenerics(g, generics)).join(', ') + '&gt;': '')
 	classDocs.innerHTML = ''
 	kw.filter(k => k[0] == '@').forEach(k => {
 		let pi = document.createElement('p')
@@ -274,69 +295,98 @@ function displayClass(dataK, path, subPath, key) {
 	kw.filter(k => k[0] == '*').forEach(k => {
 		let pi = document.createElement('p')
 		pi.classList.add('comment')
-		pi.innerHTML = k.substr(1).split('\n').join('<br>')
+		pi.innerHTML = formatComment(k.substr(1))
 		classDocs.appendChild(pi)
 	})
 	let subPath1 = key == 'Companion' ? path : subPath
-	let prefix = ["src","KOML", "SDF", "Bullet", "Box2D", "Recast", "Lua", "PDF"][dataK.p]
+	let prefix = ["src","KOML/src", "SDF/src", "Bullet/src", "Box2D/src", "Recast/src", "Lua/src", "PDF/src"][dataK.p]
 	githubLink.href = 'https://github.com/AntonioNoack/RemsEngine/blob/master/' + prefix + '/' + subPath1 + (isKtFile(kw,dataK) ? '.kt' : '/')
 	superClasses.innerHTML = ''
-	if(dataK.s) dataK.s.forEach((type) => {
-		if(superClasses.innerText.length > 0) superClasses.innerHTML += ", "
-		superClasses.innerHTML += '<b class="type">' + formatType(type) + '</b>'
-	})
+	if(dataK.s) {
+		superClassTitle.style.display = ''
+		dataK.s.forEach((type) => {
+			if(superClasses.innerText.length > 0) superClasses.innerHTML += ", "
+			superClasses.innerHTML += '<b class="type">' + formatType(type) + '</b>'
+		})
+	} else superClassTitle.style.display = 'none'
+	childClasses.innerHTML = ''
+	if(dataK.c) {
+		childClassTitle.style.display = ''
+		childClassTitle.innerText = kw.indexOf('enum') >= 0 ? 'Values' : 'Child Classes'
+		dataK.c.forEach((type) => {
+			if(childClasses.innerText.length > 0) childClasses.innerHTML += ", "
+			childClasses.innerHTML += '<b class="type">' + formatType(type) + '</b>'
+		})
+	} else childClassTitle.style.display = 'none'
 	fields.innerHTML = ''
-	if(!isNaN(dataK) || !isNaN(dataK.o)){
-		let ordinal = !isNaN(dataK) ? dataK : dataK.o
+	if(!isNaN(dataK.o)){
+		let ordinal = dataK.o
 		let pi = document.createElement('p')
 		pi.classList.add('comment')
 		pi.innerHTML = 'Ordinal: ' + ordinal
 		classDocs.appendChild(pi)
-		let typeName = subPath.split('/')
-		typeName = typeName[typeName.length-2]
-		superClasses.innerHTML += '<b class="type">' + formatType(typeName) + '</b>'
 	}
-	if(dataK.f) dataK.f.forEach((field) => {
-		// name, keywords, type
-		field[1].filter(k => k[0] == '*').forEach(k => {
-			let pi = document.createElement('p')
-			pi.classList.add('comment')
-			pi.innerHTML = k.substr(1).split('\n').join('<br>')
-			fields.appendChild(pi)
+	if(dataK.f) {
+		fieldTitle.style.display = ''
+		dataK.f.forEach((field) => {
+			// name, keywords, type
+			field[1].filter(k => k[0] == '*').forEach(k => {
+				let pi = document.createElement('p')
+				pi.classList.add('comment')
+				pi.innerHTML = formatComment(k.substr(1))
+				fields.appendChild(pi)
+			})
+			field[1].filter(k => k[0] == '@').forEach(k => {
+				let pi = document.createElement('p')
+				pi.classList.add('annotation')
+				pi.innerHTML = k
+				fields.appendChild(pi)
+			})
+			let p = document.createElement('p')
+			p.innerHTML += '<span class="keyword">' + field[1].filter(isKeyword).join(' ') + '</span> <span class="name">' + field[0] + '</span>: <span class="type">' + formatType(field[2]||'?') + '</span>'
+			fields.appendChild(p)
 		})
-		field[1].filter(k => k[0] == '@').forEach(k => {
-			let pi = document.createElement('p')
-			pi.classList.add('annotation')
-			pi.innerHTML = k
-			fields.appendChild(pi)
-		})
-		let p = document.createElement('p')
-		p.innerHTML += '<span class="keyword">' + field[1].filter(isKeyword).join(' ') + '</span> <span class="name">' + field[0] + '</span>: <span class="type">' + formatType(field[2]||'?') + '</span>'
-		fields.appendChild(p)
-	})
+	} else fieldTitle.style.display = 'none'
 	methods.innerHTML = ''
-	if(dataK.m) dataK.m.forEach((method) => {
-		// name, params, keywords, retType
-		method[2].filter(k => k[0] == '*').forEach(k => {
-			let pi = document.createElement('p')
-			pi.classList.add('comment')
-			pi.innerHTML = k.substr(1).split('\n').join('<br>')
-			methods.appendChild(pi)
+	if(dataK.m) {
+		methodTitle.style.display = ''
+		dataK.m.forEach((method) => {
+			// name, params, keywords, retType
+			let keywords = method[3]
+			keywords.filter(k => k[0] == '*').forEach(k => {
+				let pi = document.createElement('p')
+				pi.classList.add('comment')
+				pi.innerHTML = formatComment(k.substr(1))
+				methods.appendChild(pi)
+			})
+			keywords.filter(k => k[0] == '@').forEach(k => {
+				let pi = document.createElement('p')
+				pi.classList.add('annotation')
+				pi.innerHTML = k
+				methods.appendChild(pi)
+			})
+			let name = method[0]
+			let nameI = name.indexOf('.')
+			let prefixClass = null
+			if(nameI >= 0){
+				prefixClass = name.substr(0,nameI)
+				name = name.substr(nameI+1)
+			}
+			let isConstructor = name == ''
+			let p = document.createElement('p')
+			let params = method[1]
+			let generics0 = method[2]
+			let generics1 = generics.concat(generics0.map(g => g.split(':')[0]))
+			let retType = method[4]
+			p.innerHTML += '<span class="keyword">' + keywords.filter(isKeyword).join(' ') + 
+				(isConstructor ? ' constructor' : ' fun') + '</span>' + 
+				(generics0.length ? ' &lt;' + generics0.map(g => formatGenerics(g,generics1)).join(', ').split('<span class="generic">reified</span>,').join('<span class="keyword">reified</span>') + '&gt;' : '') + (isConstructor ? '' : ' ' + (prefixClass ? formatType(prefixClass, generics1) + '.' : '') + 
+				'<span class="name">' + name + '</span>') + '(' +
+				([...Array(params.length/2).keys()].map(i => '<span class="param">' + params[i*2] + '</span>: <span class="type">' + formatType(params[i*2+1], generics1) + '</span>').join(', ')) +
+				((isConstructor || retType == 'Unit') ? ')' : '): <span class="type">' + formatType(retType||'?', generics1) + '</span>')
+			methods.appendChild(p)
 		})
-		method[2].filter(k => k[0] == '@').forEach(k => {
-			let pi = document.createElement('p')
-			pi.classList.add('annotation')
-			pi.innerHTML = k
-			methods.appendChild(pi)
-		})
-		let isConstructor = method[0] == ''
-		let p = document.createElement('p')
-		let params = method[1]
-		p.innerHTML += '<span class="keyword">' + method[2].filter(isKeyword).join(' ') + (isConstructor ? ' constructor' : ' fun') + '</span>' + (isConstructor ? '' : ' <span class="name">' + method[0] + '</span>') + '(' +
-		[...Array(params.length/2).keys()].map(i => '<span class="param">' + params[i*2] + '</span>: <span class="type">' + formatType(params[i*2+1]) + '</span>').join(', ') + 
-		(isConstructor ? ')' : '): <span class="type">' + formatType(method[3]||'?') + '</span>')
-		methods.appendChild(p)
-	})
+	} else methodTitle.style.display = 'none'
 	window.history.replaceState(subPath, key, window.location.href.split('?')[0] + "?page=" + subPath)
 }
 

@@ -13,9 +13,12 @@ class Scope(val name: String, val parent: Scope?, val module: String) {
     val generics = ArrayList<Type>()
     val keywords = ArrayList<CharSequence>()
     val children = HashMap<String, Scope>()
-    val imports = HashSet<CharSequence>()
+    val childClasses = ArrayList<Scope>()
 
     val combinedName: String = if (parent == null || parent.name == "") name
+    else if ("class" in parent.keywords || "enum" in parent.keywords ||
+        "object" in parent.keywords || "interface" in parent.keywords
+    ) parent.combinedName + "$" + name
     else parent.combinedName + "." + name
 
     val ktClass: KClass<*>? by lazy {
@@ -96,22 +99,15 @@ class Scope(val name: String, val parent: Scope?, val module: String) {
     var enumOrdinal = -1
 
     fun json(builder: StringBuilder = StringBuilder()): StringBuilder {
+
+        methods.removeIf { "private" in it.keywords }
+        fields.removeIf { "private" in it.keywords }
+
         builder.append("{")
         builder.append("\"p\":").append(modules.indexOf(module)).append(',')
         for ((name, child) in children.entries.sortedBy { it.value.enumOrdinal }) {
             builder.append("\"").append(name).append("\":")
-            if (child.enumOrdinal >= 0 &&
-                child.keywords.isEmpty() &&
-                child.children.isEmpty() &&
-                child.fields.isEmpty() &&
-                child.methods.isEmpty() &&
-                child.generics.isEmpty() &&
-                child.superTypes.isEmpty()
-            ) {
-                builder.append(child.enumOrdinal)
-            } else {
-                child.json(builder)
-            }
+            child.json(builder)
             builder.append(",")
         }
         if (enumOrdinal >= 0) {
@@ -121,6 +117,14 @@ class Scope(val name: String, val parent: Scope?, val module: String) {
             builder.append("\"s\":[")
             for (type in superTypes) {
                 builder.append("\"").append(type).append("\",")
+            }
+            builder.setLength(builder.length - 1)
+            builder.append("],")
+        }
+        if (childClasses.isNotEmpty()) {
+            builder.append("\"c\":[")
+            for (child in childClasses) {
+                builder.append("\"").append(child.name).append("\",")
             }
             builder.setLength(builder.length - 1)
             builder.append("],")
@@ -157,6 +161,11 @@ class Scope(val name: String, val parent: Scope?, val module: String) {
                 }
                 if (builder.last() == ',') builder.setLength(builder.length - 1) // delete last comma
                 builder.append("],[")
+                for (param in method.generics) {
+                    builder.append("\"").append(param).append("\",")
+                }
+                if (builder.last() == ',') builder.setLength(builder.length - 1) // delete last comma
+                builder.append("],[")
                 writeKeywordList(builder, method.keywords)
                 builder.append("],")
                 if (method.returnType != null) builder.append("\"").append(method.returnType).append("\",")
@@ -177,24 +186,24 @@ class Scope(val name: String, val parent: Scope?, val module: String) {
     }
 
     fun writeKeywordList(builder: StringBuilder, keywords: List<CharSequence>) {
-        for (kw in keywords) {
-            val esc = if (kw.startsWith("/**")) {
-                val end = if (kw.endsWith("* */")) 4
-                else if (kw.endsWith("**/")) 3
+        for (keyword in keywords) {
+            val esc = if (keyword.startsWith("/**")) {
+                val end = if (keyword.endsWith("* */")) 4
+                else if (keyword.endsWith("**/")) 3
                 else 2
-                "*" + kw.subSequence(3, kw.length - end)
+                "*" + keyword.subSequence(3, keyword.length - end)
                     .trim()
                     .split('\n')
-                    .joinToString("\\n") { x ->
-                        val y = x.trim()
-                        val z = if (y.startsWith("*")) {
-                            y.substring(1).trim()
-                        } else y
-                        z
+                    .joinToString("\\n") { lineWithStar ->
+                        val lineWS2 = lineWithStar.trim()
+                        val lineWithoutStar = if (lineWS2.startsWith("*")) {
+                            lineWS2.substring(1).trim()
+                        } else lineWS2
+                        lineWithoutStar
                             .replace("\\", "\\\\")
                             .replace("\"", "\\\"")
                     }
-            } else kw
+            } else keyword
             builder.append("\"").append(esc).append("\",")
         }
         if (keywords.isNotEmpty()) builder.setLength(builder.length - 1)
