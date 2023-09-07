@@ -439,15 +439,15 @@ function createTree(ul, data, depth, path) {
 		let dataK = data[key]
 		let kw = dataK.k || []
 		
-		if(kw.indexOf('object') >= 0 || kw.indexOf('companion') >= 0) li.classList.add('ktObject')
-		if(kw.indexOf('interface') >= 0 || !isNaN(dataK.o)) li.classList.add('ktObject')
+		if(kw.indexOf('object') >= 0 || !isNaN(dataK.o)) li.classList.add('ktObject')
+		if(kw.indexOf('interface') >= 0) li.classList.add('ktInterface')
 		if(kw.indexOf('companion') >= 0) li.classList.add('ktCompanion')
 		if(kw.indexOf('class') >= 0) li.classList.add('ktClass')
 		if(kw.indexOf('enum') >= 0) li.classList.add('ktEnum')
 
 		let subPath = path ? path + '/' + key : key
 
-		function unfold(){
+		function unfold() {
 			li.classList.add('down')
 			childList.style.display = ''
 			if(childList.children.length == 0) {
