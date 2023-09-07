@@ -69,7 +69,10 @@ fun indexChildClasses(scope: Scope) {
 val typeIndex = HashMap<String, Scope>()
 val all = Scope("", null, modules.first())
 val invalid = Scope("", null, "")
+val UnknownType = Type("?", emptyList(), emptyList(), false)
+val StarType = Type("*", emptyList(), emptyList(), false)
 val UnitType = Type("Unit", emptyList(), emptyList(), false)
+val AnyTypeNullable = Type("Any", emptyList(), emptyList(), true)
 
 fun collect(folder: FileReference, module: String) {
     if (folder.isDirectory) {

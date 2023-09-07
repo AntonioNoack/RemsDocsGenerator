@@ -65,12 +65,15 @@ class Scope(val name: String, val parent: Scope?, val module: String) {
     private fun convertType(type: KType): Type? {
         when (val classifier = type.classifier) {
             is KClass<*> -> {
-                /*println(field)
-                println(clazz)
-                println(field.parameters)
-                println(field.annotations)
-                println(type.isMarkedNullable)*/
-                return Type(classifier.simpleName!!, emptyList(), emptyList(), type.isMarkedNullable)
+                return Type(
+                    classifier.simpleName!!,
+                    type.arguments.map {
+                        val type1 = it.type
+                        if (type1 == null) StarType else
+                            (convertType(type1) ?: UnknownType)
+                    },
+                    emptyList(), type.isMarkedNullable
+                )
             }
 
             is KTypeParameter -> {
