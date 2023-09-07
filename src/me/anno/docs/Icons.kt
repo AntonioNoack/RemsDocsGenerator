@@ -24,6 +24,7 @@ fun main() {
                 var h = stream.read()
                 if (h < 8) {
                     println("Weird! $w x $h @${pos.toString(16)}")
+                    pos++
                     h = stream.read()
                 }
                 // println("$w x $h")

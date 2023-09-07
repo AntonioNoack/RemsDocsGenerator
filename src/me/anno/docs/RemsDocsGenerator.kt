@@ -9,7 +9,7 @@ import java.util.zip.ZipOutputStream
 //  - HTML website, maybe MarkDeeper
 //  - like Kotlin prototype
 //  - a tree on the left side like in Intellij
-//  - search bar is most important element on site
+//  - search bar is the most important element on the website
 
 //  - collect data from all files: classes without their implementation
 //  - compress it by combining common terms (?) depends on size
@@ -20,6 +20,7 @@ import java.util.zip.ZipOutputStream
 // todo Hierarchy object is incomplete src/me/anno/ecs/prefab/Hierarchy.kt
 // todo properly find types using reflection, where extension methods are used
 // todo make links in documentation link to target
+// todo clickable/copyable package path?
 
 // generate space-efficient online documentation, that is also searchable
 val modules = listOf("src", "KOML/src", "SDF/src", "Bullet/src", "Box2D/src", "Recast/src", "Lua/src", "PDF/src")
@@ -435,8 +436,8 @@ fun indexKotlin(file: FileReference, module: String) {
                         val child = scope.getChild(type.name, module)
                         child.superTypes.addAll(type.superTypes)
                         child.generics.addAll(type.generics)
+                        copyKeywords(child.keywords)
                         if (consume("{")) {
-                            copyKeywords(child.keywords)
                             readClassBody(child)
                         }
                     }
@@ -456,9 +457,9 @@ fun indexKotlin(file: FileReference, module: String) {
                             keywords.add("fun")
                             keywords.add("interface")
                             val type = readType(scope)
+                            val child = scope.getChild(type.name, module)
+                            copyKeywords(child.keywords)
                             if (consume("{")) {
-                                val child = scope.getChild(type.name, module)
-                                copyKeywords(child.keywords)
                                 readClassBody(child)
                             }
                         } else {
