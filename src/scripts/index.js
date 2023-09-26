@@ -321,7 +321,7 @@ function displayClass(dataK, path, subPath, key) {
 	})
 	let linkParentPath = key == 'Companion' || !isNaN(dataK.o)
 	let subPath1 = linkParentPath ? path : subPath
-	let prefix = ["src","KOML/src", "SDF/src", "Bullet/src", "Box2D/src", "Recast/src", "Lua/src", "PDF/src"][dataK.p]
+	let prefix = ["src","test/src","KOML/src", "SDF/src", "Bullet/src", "Box2D/src", "Recast/src", "Lua/src", "PDF/src"][dataK.p]
 	githubLink.href = 'https://github.com/AntonioNoack/RemsEngine/blob/master/' + prefix + '/' + subPath1 + (isKtFile(kw,dataK) ? '.kt' : '/')
 	superClasses.innerHTML = ''
 	if(dataK.s) {

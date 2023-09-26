@@ -1,5 +1,7 @@
 package me.anno.docs
 
+import me.anno.docs.Type.Companion.StarType
+import me.anno.docs.Type.Companion.UnknownType
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
 import kotlin.reflect.KTypeParameter
@@ -8,6 +10,11 @@ import kotlin.reflect.full.declaredFunctions
 import kotlin.reflect.full.memberProperties
 
 class Scope(val name: String, val parent: Scope?, val module: String) {
+
+    companion object {
+        val all = Scope("", null, modules.first())
+        val invalid = Scope("", null, "")
+    }
 
     val superTypes = ArrayList<Type>()
     val generics = ArrayList<Type>()

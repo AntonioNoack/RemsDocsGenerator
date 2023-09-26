@@ -6,10 +6,18 @@ data class Type(
     val superTypes: List<Type>,
     val isNullable: Boolean
 ) {
+
+    private fun formatGenerics() = if (generics.isEmpty()) "" else "<${generics.joinToString(",")}>"
+    private fun formatSuperTypes() = if (superTypes.isEmpty()) "" else ":${superTypes.joinToString(",")}"
+    private fun formatNullable() = if (isNullable) "?" else ""
+    private fun formatName() = name.toString()
     override fun toString(): String {
-        val nullable = if (isNullable) "?" else ""
-        return name.toString() +
-                (if (generics.isEmpty()) "" else "<${generics.joinToString(",")}>") +
-                (if (superTypes.isEmpty()) "" else ":${superTypes.joinToString(",")}") + nullable
+        return formatName() + formatGenerics() + formatSuperTypes() + formatNullable()
+    }
+
+    companion object {
+        val UnknownType = Type("?", emptyList(), emptyList(), false)
+        val StarType = Type("*", emptyList(), emptyList(), false)
+        val UnitType = Type("Unit", emptyList(), emptyList(), false)
     }
 }

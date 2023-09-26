@@ -1,4 +1,4 @@
-package me.anno.docs
+package me.anno.docs.utils
 
 import me.anno.image.raw.ByteImage
 import me.anno.io.files.FileReference.Companion.getReference

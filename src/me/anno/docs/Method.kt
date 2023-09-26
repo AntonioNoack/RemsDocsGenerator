@@ -5,5 +5,7 @@ class Method(
     val generics: List<Type>,
     val params: List<Parameter>,
     val returnType: Type?,
-    val keywords: List<CharSequence>
+    val keywords: List<CharSequence>,
+    val startLine: Int,
+    val endLine: Int,
 )
