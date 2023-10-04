@@ -276,7 +276,7 @@ class KotlinIndexer(private val file: FileReference, private val module: String)
         val generics = readGenerics()
         if (scope != null) { // supports arguments
             val startLine = lineNumber
-            val scopeI = scope.getChild(name, module)
+            val scopeI = getChildScope(scope, name)
             copyKeywords(scopeI.keywords)
             if (consume("private")) keywords.add("private")
             if (consume("protected")) keywords.add("protected")
@@ -339,6 +339,7 @@ class KotlinIndexer(private val file: FileReference, private val module: String)
         // this prevents multiple main() functions in my test scopes to be confusing
         if (file.absolutePath.endsWith(scope.combinedName.replace(".", "/") + "/" + file.name)) {
             scope = scope.getChild(file.nameWithoutExtension, module)
+            scope.isPseudo = true
         }
         return scope
     }
@@ -360,10 +361,16 @@ class KotlinIndexer(private val file: FileReference, private val module: String)
         readType()
     }
 
+    private fun getChildScope(scope: Scope, name: CharSequence): Scope {
+        // meh solution, abc.xyz.A$A will not work
+        return if (scope.name == name && scope.isPseudo) scope
+        else scope.getChild(name, module)
+    }
+
     private fun readClass(scope: Scope, tk: CharSequence) {
         keywords.add(tk)
         val type = readType(scope)
-        val child = scope.getChild(type.name, module)
+        val child = getChildScope(scope, type.name)
         child.superTypes.addAll(type.superTypes)
         child.generics.addAll(type.generics)
         copyKeywords(child.keywords)
@@ -377,7 +384,7 @@ class KotlinIndexer(private val file: FileReference, private val module: String)
         keywords.add("fun")
         keywords.add("interface")
         val type = readType(scope)
-        val child = scope.getChild(type.name, module)
+        val child = getChildScope(scope, type.name)
         copyKeywords(child.keywords)
         if (consume("{")) {
             readClassBody(child)
@@ -463,7 +470,7 @@ class KotlinIndexer(private val file: FileReference, private val module: String)
 
     private fun readObject(scope: Scope) {
         val name = read()!!
-        val child = scope.getChild(name, module)
+        val child = getChildScope(scope, name)
         keywords.add("object")
         copyKeywords(child.keywords)
         if (consume(":")) {
@@ -484,7 +491,7 @@ class KotlinIndexer(private val file: FileReference, private val module: String)
         if (!consume("class")) throw IllegalStateException("Expected class after enum")
         keywords.add("enum")
         val type = readType(scope)
-        val child = scope.getChild(type.name, module)
+        val child = getChildScope(scope, type.name)
         child.generics.addAll(type.generics)
         child.superTypes.addAll(type.superTypes)
         copyKeywords(child.keywords)

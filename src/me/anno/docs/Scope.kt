@@ -104,6 +104,9 @@ class Scope(val name: String, val parent: Scope?, val module: String) {
         return children.getOrPut(name) { Scope(name, this, module) }
     }
 
+    // path like me.anno.Engine, being actually just inside Engine.kt in me.anno, not an object yet
+    var isPseudo = false
+
     val fields = ArrayList<Field>()
     val methods = ArrayList<Method>()
     var enumOrdinal = -1
