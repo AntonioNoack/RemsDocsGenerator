@@ -83,6 +83,10 @@ input {
 	max-width: 70em;
 }
 
+.comment a {
+	color: #a6ffa6;
+}
+
 .generic {
 	color: #46ecf1;
 }

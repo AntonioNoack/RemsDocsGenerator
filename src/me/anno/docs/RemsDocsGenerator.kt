@@ -16,6 +16,8 @@ import java.util.zip.ZipOutputStream
 //  - compress it by combining common terms (?) depends on size
 //  - index the most common terms / via compression (?) depends on size
 
+// todo replace FunctionX<Params,...,RetType> to (Params,...)->RetType...
+
 // todo google-indexability: add links to the tree (?)
 
 // todo Hierarchy object is incomplete src/me/anno/ecs/prefab/Hierarchy.kt

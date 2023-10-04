@@ -57,9 +57,10 @@ function runSearch(term) {
 			// try to find class, prefer to have it first
 			let end = '/' + term
 			result.forEach(r => {
-				r.push(
-					endsWith(r[0].toLowerCase(), end)?2:
-					r[0].toLowerCase().indexOf(end)>=0?1.5:-1/r[1].length
+				r[2] += (
+					endsWith(r[0].toLowerCase(), end) ? 20 :
+					r[0].toLowerCase().indexOf(end)>=0 ? 15 :
+					-1 / r[1].length
 				);
 			})
 			result.sort((a,b) => b[2]-a[2])
@@ -70,21 +71,24 @@ function runSearch(term) {
 			child.onclick = () => { openPath(path) }
 			child.style.cursor = 'pointer'
 			child.innerHTML = '<span class="name">' + path + '</span>' + ': ' + r[1].map(ri => {
-				let i = 0
-				let ril = ri
+				ri = ri
+					.split('<').join('&lt;')
+					.split('>').join('&gt;')
 					.split('\n').join('\\n')
 					.split('<b>').join('')
 					.split('</b>').join('')
-					.toLowerCase()
+				let i = 0
+				let ril = ri.toLowerCase()
 				let res = ''
-				while(true){
+				while(true) {
+				// todo apply this earlier?, so we can highlight partial matching?
 					let j = ril.indexOf(term,i)
 					if(j >= 0) {
-						res += ri.substr(i,j-i)
+						res += ri.substring(i,j)
 						res += '<b>'+ri.substr(j,term.length)+'</b>'
-						i = j+term.length
+						i = j + term.length
 					} else {
-						res += ri.substr(i)
+						res += ri.substring(i)
 						break
 					}
 				}
@@ -120,6 +124,42 @@ function openPath(path) {
 	displayClass(obj, path1, path, parts[parts.length-1])
 }
 
+// todo immediate list of search results (onCharTyped())
+function containsSearchTerm(text0, term) {
+// for score, use the length of the longest run
+	let text = text0.toLowerCase()
+	if(text.indexOf(term) >= 0) return term.length * Math.log(term.length+1) * 3
+	// only apply advanced search, if text is a path?
+	if(text.indexOf(' ') >= 0) return 0
+	let anyLower = false
+	for(let i=0;i<text.length;i++) {
+		if(text[i] == text0[i]) {
+			anyLower = true
+			break
+		}
+	}
+	let allUpper = !anyLower
+	for(let i=0,j=0,li=-1,lr=0,ls=0;i<text.length;i++) {
+		if(text[i] == term[j]) {
+			// for score, value upper case letters more?
+			let dlr = allUpper || text[i] == text0[i] ? 1 : 2
+			if(li+1 == i) {
+				lr += dlr
+			} else {
+				ls += lr * Math.log(lr+1)
+				lr = dlr
+			}
+			if(++j == term.length) {
+				ls += lr * Math.log(lr+1)
+				console.log(text0, ls)
+				return ls
+			}
+			li = i
+		}
+	}
+	return 0
+}
+
 function search(data, term, path, result) {
 	if(Array.isArray(data)) {
 		for(let i=0;i<data.length;i++) {
@@ -130,15 +170,19 @@ function search(data, term, path, result) {
 		for(key in data) {
 			if(result.length >= maxNumResults) return
 			let pathI = path ? key.length == 1 ? path : path + '/' + key : key
-			if(key.length > 1 && key.toLowerCase().indexOf(term) >= 0) {
-				let v = [pathI, key]
-				addResult(result, v)
+			if(key.length > 1) {
+				let score = containsSearchTerm(key, term)
+				if(score) {
+					let v = [pathI, key, score]
+					addResult(result, v)
+				}
 			}
 			search(data[key], term, pathI, result)
 		}
 	} else if(typeof data === 'string' || data instanceof String) {
-		if(data.toLowerCase().indexOf(term) >= 0) {
-			let v = [path, data]
+		let score = containsSearchTerm(data, term)
+		if(score) {
+			let v = [path, data, score]
 			addResult(result, v)
 		}
 	}
@@ -147,11 +191,14 @@ function search(data, term, path, result) {
 function addResult(result, v) {
 	for(let i=0;i<result.length;i++){
 		if(result[i][0] == v[0]) {
-			if(result[i][1].indexOf(v[1]) < 0) result[i][1].push(v[1])
+			if(result[i][1].indexOf(v[1]) < 0) {
+				result[i][1].push(v[1])
+			}
+			result[i][2] = Math.max(v[2], result[i][2])
 			return;
 		}
 	}
-	result.push([v[0],[v[1]]])
+	result.push([v[0],[v[1]],v[2]])
 }
 
 function isUpper(c){
@@ -204,10 +251,12 @@ typeIndex['URI'] = oracle + 'net/URI.html'
 typeIndex['URL'] = oracle + 'net/URL.html'
 typeIndex['Class'] = oracle + 'lang/Class.html'
 typeIndex['Thread'] = oracle + 'lang/Thread.html'
+typeIndex['Enum'] = oracle + 'lang/Enum.html'
 'File,DataInputStream,DataOutputStream,InetAddress,Socket,Closeable,BufferedReader,BufferedWriter'.split(',').forEach(name => {
 	typeIndex[name] = oracle + 'io/'+name+'.html'
 })
 
+typeIndex['BufferedImage'] = oracle + 'awt/image/BufferedImage.html'
 typeIndex['AtomicBoolean'] = oracle + 'util/concurrent/atomic/AtomicBoolean.html'
 typeIndex['AtomicInteger'] = oracle + 'util/concurrent/atomic/AtomicInteger.html'
 typeIndex['AtomicLong'] = oracle + 'util/concurrent/atomic/AtomicLong.html'
@@ -281,10 +330,50 @@ function formatType(typeName, ignored) {
 	return link ? '<a class="type" href="' + fullLink + '">' + escapedName + '</a>' : isIgnored ? '<span class="generic">' + escapedName + '</span>' : escapedName
 }
 
+function formatCommentLinks(c) {
+	let i = 0
+	let r = ''
+	while(true){
+		let j0 = c.indexOf('https://', i)
+		let j1 = c.indexOf('http://', i)
+		let j = Math.min(j0<0?c.length:j0, j1<0?c.length:j1)
+		if(j >= c.length) break
+		// find end of link... ], space, \t\r\n
+		let endChars = ' \t\r\n'
+		if(c[j-1] == '[') endChars = ']'
+		else if(c[j-1] == '(') endChars = ')'
+		let k=j
+		if(endChars.length == 1){
+			k = c.indexOf(endChars, j)
+			if(k<0) k = c.length
+		} else {
+			for(;k<c.length;k++) {
+				if(endChars.indexOf(c[k]) >= 0) {
+					break
+				}
+			}
+		}
+		// [title](url)
+		if(c[j-2] == ']' && c[j-1] == '(' && c.lastIndexOf('[',j-2) >= i && c[k] == ')') {
+			let q = c.lastIndexOf('[',j-2)
+			r += c.substring(i, q)
+			let url = c.substring(j, k)
+			r += '<a href="' + url + '">' + c.substring(q+1,j-2) + '</a>'
+			k++ // skip )
+		} else {
+			r += c.substring(i, j)
+			let url = c.substring(j, k)
+			r += '<a href="' + url + '">' + url + '</a>'
+		}
+		i = k
+	}
+	if(i == 0) return c
+	return r + c.substring(i)
+}
+
 function formatComment(c) {
-	// todo make links work
 	// make @param, @throws and such bold
-	return c.split('\n').join('<br>')
+	return c.split('\n').map(formatCommentLinks).join('<br>')
 		.split('@param').join('<b>@param</b>')
 		.split('@throws').join('<b>@throws</b>')
 		.split('@return').join('<b>@return</b>')
