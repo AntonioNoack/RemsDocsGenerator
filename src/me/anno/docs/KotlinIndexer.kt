@@ -498,6 +498,7 @@ class KotlinIndexer(private val file: FileReference, private val module: String)
         if (consume("{")) {
             var i = 0
             enumValues@ while (!consume(";")) {
+                consumeAnnotations()
                 val name = read()!!
                 when {
                     name == "}" -> {
