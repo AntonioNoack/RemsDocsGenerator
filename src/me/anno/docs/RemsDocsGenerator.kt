@@ -16,6 +16,8 @@ import java.util.zip.ZipOutputStream
 //  - compress it by combining common terms (?) depends on size
 //  - index the most common terms / via compression (?) depends on size
 
+// todo index/store/load readme files
+
 // todo replace FunctionX<Params,...,RetType> to (Params,...)->RetType...
 
 // todo google-indexability: add links to the tree (?)
@@ -32,8 +34,9 @@ import java.util.zip.ZipOutputStream
 
 // generate space-efficient online documentation, that is also searchable
 val modules = listOf(
-    "src", "test/src", "KOML/src", "SDF/src", "Bullet/src",
-    "Box2D/src", "Recast/src", "Lua/src", "PDF/src"
+    "src", "test/src", "KOML/src", "SDF/src", "Bullet/src", "BulletJME/src",
+    "Box2D/src", "Recast/src", "Lua/src", "PDF/src",
+    "JVM/src", "Mesh/src", "Image/src", "Unpack/src", "Video/src"
 )
 
 val src = documents.getChild("IdeaProjects/RemsEngine")
@@ -61,10 +64,9 @@ fun writeResult() {
     }
 }
 
-
 fun collect(folder: FileReference, module: String) {
     if (folder.isDirectory) {
-        for (child in folder.listChildren()!!) {
+        for (child in folder.listChildren()) {
             if (child.isDirectory) collect(child, module)
             else when (child.lcExtension) {
                 "kt" -> indexKotlin(child, module)

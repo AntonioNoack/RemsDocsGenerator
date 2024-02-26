@@ -1,7 +1,7 @@
 package me.anno.docs.utils
 
 import me.anno.image.raw.ByteImage
-import me.anno.io.files.FileReference.Companion.getReference
+import me.anno.io.files.Reference.getReference
 import me.anno.utils.OS.desktop
 import me.anno.utils.types.InputStreams.readNBytes2
 
@@ -12,7 +12,7 @@ import me.anno.utils.types.InputStreams.readNBytes2
 fun main() {
     desktop.getChild("icon").tryMkdirs()
     val folder = getReference("C:\\Program Files\\IntelliJ IDEA\\bin\\icons")
-    for (src in folder.listChildren()!!) {
+    for (src in folder.listChildren()) {
         var i = 0
         val stream = src.inputStreamSync()
         var pos = 0L
