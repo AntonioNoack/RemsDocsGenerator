@@ -262,8 +262,10 @@ typeIndex['AtomicInteger'] = oracle + 'util/concurrent/atomic/AtomicInteger.html
 typeIndex['AtomicLong'] = oracle + 'util/concurrent/atomic/AtomicLong.html'
 
 function formatMarkdown(md) {
+ 	// todo remove single line breaks, where the next line is not starting a list... (?)
+ 	// todo find and format links properly
 	return formatComment(
-		md // todo remove single line breaks, where the next line is not starting a list... (?)
+		md
 			.split('\n')
 			.map(line => line.indexOf('###') == 0 ? '<h4>'+line.substr(3)+'</h4>' : line)
 			.map(line => line.indexOf('##') == 0 ? '<h3>'+line.substr(2)+'</h3>' : line)
