@@ -150,7 +150,6 @@ class KotlinIndexer(private val file: FileReference, private val module: String)
                         }
                     }
                 }
-
                 ")", "]", "}", ">" -> {
                     // out of bounds
                     putBack.add(tk)
@@ -177,7 +176,6 @@ class KotlinIndexer(private val file: FileReference, private val module: String)
                         return
                     }
                 }
-
                 "+", "-", "*", "/", "%", "=", "&", "|", ".", "?:" -> {
                     // formula continues
                     if (depth == 0) {
@@ -185,7 +183,6 @@ class KotlinIndexer(private val file: FileReference, private val module: String)
                         return
                     } // else we don't skip it anyway
                 }
-
                 null -> return
                 else -> {
                     // println("skipEval($l0): $line>$li,$depth,$tki")

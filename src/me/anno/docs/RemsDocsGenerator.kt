@@ -6,6 +6,7 @@ import me.anno.io.files.FileReference
 import me.anno.utils.OS.documents
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import kotlin.math.min
 
 //  - HTML website, maybe MarkDeeper
 //  - like Kotlin prototype
@@ -17,6 +18,7 @@ import java.util.zip.ZipOutputStream
 //  - index the most common terms / via compression (?) depends on size
 
 // todo index/store/load readme files
+// todo show message for @Deprecated
 
 // todo replace FunctionX<Params,...,RetType> to (Params,...)->RetType...
 
@@ -70,6 +72,7 @@ fun collect(folder: FileReference, module: String) {
             if (child.isDirectory) collect(child, module)
             else when (child.lcExtension) {
                 "kt" -> indexKotlin(child, module)
+                "md" -> indexMarkdown(child, module)
             }
         }
     } else indexKotlin(folder, module)
@@ -77,4 +80,17 @@ fun collect(folder: FileReference, module: String) {
 
 fun indexKotlin(file: FileReference, module: String) {
     KotlinIndexer(file, module).index()
+}
+
+fun indexMarkdown(file: FileReference, module: String) {
+    val path0 = file.getParent().absolutePath
+    val path = path0
+        .substring(min(src.absolutePath.length + module.length + 2, path0.length))
+        .split('/')
+        .filter { it.isNotEmpty() }
+    var scope = all
+    for (pth in path) {
+        scope = scope.getChild(pth, module)
+    }
+    scope.keywords.add("#${file.readTextSync()}")
 }

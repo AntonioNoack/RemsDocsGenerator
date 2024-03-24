@@ -217,7 +217,7 @@ function sortObject(obj) {
 }
 
 function isKeyword(k){
-	return k[0] != '*' && k[0] != '@'
+	return k[0] != '*' && k[0] != '@' && k[0] != '#'
 }
 
 // define links for standard library
@@ -260,6 +260,21 @@ typeIndex['BufferedImage'] = oracle + 'awt/image/BufferedImage.html'
 typeIndex['AtomicBoolean'] = oracle + 'util/concurrent/atomic/AtomicBoolean.html'
 typeIndex['AtomicInteger'] = oracle + 'util/concurrent/atomic/AtomicInteger.html'
 typeIndex['AtomicLong'] = oracle + 'util/concurrent/atomic/AtomicLong.html'
+
+function formatMarkdown(md) {
+	return formatComment(
+		md // todo remove single line breaks, where the next line is not starting a list... (?)
+			.split('\n')
+			.map(line => line.indexOf('###') == 0 ? '<h4>'+line.substr(3)+'</h4>' : line)
+			.map(line => line.indexOf('##') == 0 ? '<h3>'+line.substr(2)+'</h3>' : line)
+			.map(line => line.indexOf('#') == 0 ? '<h2>'+line.substr(1)+'</h2>' : line)
+			.join('\n')
+			.trim()
+	)
+		.split('/h2><br><br>').join('/h2>')
+		.split('/h3><br><br>').join('/h3>')
+		.split('/h4><br><br>').join('/h4>')
+}
 
 function formatType(typeName, ignored) {
 	
@@ -402,6 +417,12 @@ function displayClass(dataK, path, subPath, key) {
 		pi.innerHTML = k
 		classDocs.appendChild(pi)
 	})
+	kw.filter(k => k[0] == '#').forEach(k => {
+		let pi = document.createElement('p')
+		pi.classList.add('comment')
+		pi.innerHTML = formatMarkdown(k.substr(1))
+		classDocs.appendChild(pi)
+	})
 	kw.filter(k => k[0] == '*').forEach(k => {
 		let pi = document.createElement('p')
 		pi.classList.add('comment')
@@ -446,6 +467,12 @@ function displayClass(dataK, path, subPath, key) {
 				let pi = document.createElement('p')
 				pi.classList.add('comment')
 				pi.innerHTML = formatComment(k.substr(1))
+				fields.appendChild(pi)
+			})
+			field[1].filter(k => k[0] == '#').forEach(k => {
+				let pi = document.createElement('p')
+				pi.classList.add('comment')
+				pi.innerHTML = formatMarkdown(k.substr(1))
 				fields.appendChild(pi)
 			})
 			field[1].filter(k => k[0] == '@').forEach(k => {

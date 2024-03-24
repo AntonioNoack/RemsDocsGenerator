@@ -198,25 +198,38 @@ class Scope(val name: String, val parent: Scope?, val module: String) {
         return builder
     }
 
-    fun writeKeywordList(builder: StringBuilder, keywords: List<CharSequence>) {
+    private fun String.escapeSpecial(): String {
+        return this
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+    }
+
+    private fun writeKeywordList(builder: StringBuilder, keywords: List<CharSequence>) {
         for (keyword in keywords) {
-            val esc = if (keyword.startsWith("/**")) {
-                val end = if (keyword.endsWith("* */")) 4
-                else if (keyword.endsWith("**/")) 3
-                else 2
-                "*" + keyword.subSequence(3, keyword.length - end)
-                    .trim()
-                    .split('\n')
-                    .joinToString("\\n") { lineWithStar ->
-                        val lineWS2 = lineWithStar.trim()
-                        val lineWithoutStar = if (lineWS2.startsWith("*")) {
-                            lineWS2.substring(1).trim()
-                        } else lineWS2
-                        lineWithoutStar
-                            .replace("\\", "\\\\")
-                            .replace("\"", "\\\"")
-                    }
-            } else keyword
+            val esc = when {
+                keyword.startsWith("/**") -> {
+                    val end = if (keyword.endsWith("* */")) 4
+                    else if (keyword.endsWith("**/")) 3
+                    else 2
+                    "*" + keyword.subSequence(3, keyword.length - end)
+                        .trim()
+                        .split('\n')
+                        .joinToString("\\n") { lineWithStar ->
+                            val lineWS2 = lineWithStar.trim()
+                            val lineWithoutStar = if (lineWS2.startsWith("*")) {
+                                lineWS2.substring(1).trim()
+                            } else lineWS2
+                            lineWithoutStar.escapeSpecial()
+                        }
+                }
+                keyword.startsWith("#") -> {
+                    keyword.toString()
+                        .escapeSpecial()
+                        .replace("\r", "")
+                        .replace("\n", "\\n")
+                }
+                else -> keyword
+            }
             builder.append("\"").append(esc).append("\",")
         }
         if (keywords.isNotEmpty()) builder.setLength(builder.length - 1)

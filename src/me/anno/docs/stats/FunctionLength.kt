@@ -51,6 +51,7 @@ class Function(val scope: Scope, val method: Method) {
 val functions = ArrayList<Function>()
 
 fun collectMethods(scope: Scope) {
+    if (scope.combinedName == "me.anno.tests") return
     functions.addAll(scope.methods.map { Function(scope, it) })
     for (child in scope.children.values) {
         collectMethods(child)
