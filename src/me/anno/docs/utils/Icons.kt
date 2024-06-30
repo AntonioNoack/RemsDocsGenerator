@@ -1,9 +1,9 @@
 package me.anno.docs.utils
 
 import me.anno.image.raw.ByteImage
+import me.anno.io.Streams.readNBytes2
 import me.anno.io.files.Reference.getReference
 import me.anno.utils.OS.desktop
-import me.anno.utils.types.InputStreams.readNBytes2
 
 /**
  * This was a test on whether I find the sources for the icons in IntelliJ IDEA.

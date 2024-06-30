@@ -38,7 +38,8 @@ import kotlin.math.min
 val modules = listOf(
     "src", "test/src", "KOML/src", "SDF/src", "Bullet/src", "BulletJME/src",
     "Box2D/src", "Recast/src", "Lua/src", "PDF/src",
-    "JVM/src", "Mesh/src", "Image/src", "Unpack/src", "Video/src"
+    "JVM/src", "Mesh/src", "Image/src", "Unpack/src", "Video/src",
+    "Recast/src", "Network/src", "OpenXR/src"
 )
 
 val src = documents.getChild("IdeaProjects/RemsEngine")
